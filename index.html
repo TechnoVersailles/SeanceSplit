@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Chronomètres de Séances Pédagogiques</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gestion des Chronomètres de Séances Pédagogiques</h1>
+        </header>
+        
+        <nav>
+            <button id="btnAteliers" class="nav-btn active">Gestion Ateliers</button>
+            <button id="btnSeances" class="nav-btn">Gestion Séances</button>
+            <button id="btnChronos" class="nav-btn">Gestion Chronomètres</button>
+            <button id="btnVisualisation" class="nav-btn">Visualisation Séances</button>
+        </nav>
+        
+        <main>
+            <!-- Section Ateliers -->
+            <section id="ateliersSection" class="section active">
+                <h2>Gestion des Ateliers</h2>
+                <div class="form-container">
+                    <input type="text" id="atelierNom" placeholder="Nom de l'atelier" required>
+                    <textarea id="atelierDescription" placeholder="Description de l'atelier"></textarea>
+                    <button id="btnAddAtelier">Ajouter Atelier</button>
+                </div>
+                
+                <div class="list-container">
+                    <h3>Liste des Ateliers</h3>
+                    <table id="ateliersTable">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ateliersList">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Section Séances -->
+            <section id="seancesSection" class="section">
+                <h2>Gestion des Séances</h2>
+                <div class="form-container">
+                    <input type="text" id="seanceNom" placeholder="Nom de la séance" required>
+                    <select id="seanceAtelier">
+                        <option value="">Sélectionner un atelier</option>
+                    </select>
+                    <textarea id="seanceDescription" placeholder="Description de la séance"></textarea>
+                    <button id="btnAddSeance">Ajouter Séance</button>
+                </div>
+                
+                <div class="list-container">
+                    <h3>Liste des Séances</h3>
+                    <table id="seancesTable">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Atelier</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="seancesList">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Section Chronomètres -->
+            <section id="chronosSection" class="section">
+                <h2>Gestion des Chronomètres</h2>
+                <div class="form-container">
+                    <select id="chronoSeance">
+                        <option value="">Sélectionner une séance</option>
+                    </select>
+                    <input type="text" id="chronoTitre" placeholder="Titre du chronomètre" required>
+                    <input type="number" id="chronoDuree" placeholder="Durée (secondes)" min="1" required>
+                    <textarea id="chronoTravail" placeholder="Travail à effectuer"></textarea>
+                    <button id="btnAddChrono">Ajouter Chronomètre</button>
+                </div>
+                
+                <div class="list-container">
+                    <h3>Liste des Chronomètres</h3>
+                    <table id="chronosTable">
+                        <thead>
+                            <tr>
+                                <th>Séance</th>
+                                <th>Titre</th>
+                                <th>Durée</th>
+                                <th>Travail</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chronosList">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Section Visualisation -->
+            <section id="visualisationSection" class="section">
+                <h2>Visualisation des Séances Chronométrées</h2>
+                <div class="selection-container">
+                    <label for="visuSeanceSelect">Sélectionnez une séance : </label>
+                    <select id="visuSeanceSelect">
+                        <option value="">Choisissez une séance</option>
+                    </select>
+                    <button id="btnStartSession">Démarrer la séance</button>
+                </div>
+                
+                <div id="sessionDisplay" class="session-display hidden">
+                    <div class="current-timer">
+                        <h3 id="currentTimerTitle">Titre du chronomètre actuel</h3>
+                        <div class="timer-display">
+                            <span id="timerMinutes">00</span>:<span id="timerSeconds">00</span>
+                        </div>
+                        <p id="currentWork">Travail à effectuer</p>
+                    </div>
+                    
+                    <div class="controls">
+                        <button id="btnStartPause">Démarrer</button>
+                        <button id="btnNext">Suivant</button>
+                        <button id="btnReset">Réinitialiser</button>
+                    </div>
+                    
+                    <div class="timeline">
+                        <h4>Chronologie de la séance</h4>
+                        <div id="timelineContainer"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
