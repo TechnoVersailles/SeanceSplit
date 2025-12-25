@@ -2,6 +2,12 @@
 
 Cette application permet de découper vos séances de cours en plusieurs chronomètres avec les travaux à effectuer dans chaque intervalle de temps. Elle propose une gestion complète des ateliers, séances et chronomètres.
 
+## Aperçu
+
+![Fin de séance](capt_demo01.png)
+![Gestion des Ateliers](capt_demo02.png)
+![Gestion de la Grille Horaire](capt_demo03.png)
+
 ## Fonctionnalités
 
 - **Gestion des Ateliers** : Créez et gérez vos ateliers pédagogiques
