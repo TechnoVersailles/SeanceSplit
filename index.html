@@ -145,6 +145,8 @@
             <section id="grilleSection" class="section">
                 <h2>Gestion de la Grille Horaire</h2>
                 <div class="form-container">
+                    <input type="text" id="slotEstablishment" placeholder="Établissement (ex: École A)" list="establishmentList">
+                    <datalist id="establishmentList"></datalist>
                     <input type="text" id="slotNom" placeholder="Nom du créneau (ex: M1, 8h-9h)" required>
                     <div class="time-inputs">
                         <label>Début : <input type="time" id="slotDebut" required></label>
@@ -158,6 +160,7 @@
                     <table id="grilleTable">
                         <thead>
                             <tr>
+                                <th>Établissement</th>
                                 <th>Nom</th>
                                 <th>Horaire</th>
                                 <th>Actions</th>
@@ -184,6 +187,15 @@
                     <input type="file" id="fileImport" accept=".json">
                     <button id="btnImport" style="background-color: #dc3545;">Importer les données</button>
                 </div>
+
+                <div class="form-container">
+                    <h3>Actions Rapides</h3>
+                    <p>Générez des données pour tester l'application ou effacez tout pour recommencer à zéro.</p>
+                    <div class="actions-row">
+                        <button id="btnDemo" style="background-color: #17a2b8;">Mode Démo (Exemples)</button>
+                        <button id="btnReset" style="background-color: #343a40;">Réinitialiser Tout (Reset)</button>
+                    </div>
+                </div>
             </section>
 
             <!-- Section Visualisation -->
@@ -199,6 +211,9 @@
                             <input type="checkbox" id="visuAlignGrid">
                             <label for="visuAlignGrid">Aligner grille</label>
                         </div>
+                        <select id="visuEstablishmentSelect" style="display: none; padding: 5px; border-radius: 5px; border: 1px solid #ced4da;">
+                            <option value="">-- Établissement --</option>
+                        </select>
                         <div class="option-item" title="Passe automatiquement au chrono suivant">
                             <input type="checkbox" id="autoPlay" checked>
                             <label for="autoPlay">Enchaînement auto</label>

@@ -129,6 +129,12 @@ nav {
     background-color: #0b5ed7;
 }
 
+.actions-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .list-container {
     margin-top: 20px;
 }
@@ -157,6 +163,17 @@ th {
 
 tr:hover {
     background-color: #f8f9fa;
+}
+
+.group-header {
+    background-color: #e9ecef;
+    cursor: pointer;
+    font-weight: bold;
+    user-select: none;
+}
+
+.group-header:hover {
+    background-color: #dee2e6;
 }
 
 /* Editable Tables */

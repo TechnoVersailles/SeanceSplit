@@ -8,6 +8,7 @@ Cette application permet de découper vos séances de cours en plusieurs chronom
 - **Gestion des Séances** : Créez des séances liées à des ateliers
 - **Gestion des Chronomètres** : Ajoutez des chronomètres avec durée et travail à effectuer à chaque séance
 - **Visualisation des Séances** : Lancez une séance avec tous ses chronomètres et suivez leur progression
+- **Sauvegarde et Démo** : Import/Export de données, mode Démo pour tester, et Reset pour tout effacer
 
 ## Structure de l'Application
 

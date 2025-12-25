@@ -19,6 +19,12 @@ class TimeManagementApp {
         this.displayModes = ['mode-border-red', 'mode-flash', 'mode-evolutive', 'mode-contrast'];
         this.currentModeIndex = 0; // 0 = Flash par défaut
         
+        // Gestion de l'affichage groupé des chronomètres
+        this.expandedSessions = new Set();
+        this.timers.forEach(t => {
+            if (t.sessionId) this.expandedSessions.add(Number(t.sessionId));
+        });
+
         // Initialisation de l'interface
         this.initUI();
         this.updateLists();
@@ -65,6 +71,14 @@ class TimeManagementApp {
         document.getElementById('btnImport').addEventListener('click', () => {
             this.importData();
         });
+
+        document.getElementById('btnDemo').addEventListener('click', () => {
+            this.loadDemoData();
+        });
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            this.resetData();
+        });
         
         // Visualisation de séance
         document.getElementById('btnStartSession').addEventListener('click', () => {
@@ -77,6 +91,11 @@ class TimeManagementApp {
 
         document.getElementById('btnToggleMode').addEventListener('click', () => {
             this.toggleDisplayMode();
+        });
+
+        // Gestion visibilité select établissement
+        document.getElementById('visuAlignGrid').addEventListener('change', (e) => {
+            document.getElementById('visuEstablishmentSelect').style.display = e.target.checked ? 'inline-block' : 'none';
         });
     }
     
@@ -109,6 +128,7 @@ class TimeManagementApp {
         this.updateTimeSlotList();
         this.updateSessionSelect();
         this.updateWorkshopSelect();
+        this.updateEstablishmentSelect();
     }
     
     // Gestion des ateliers
@@ -414,6 +434,7 @@ class TimeManagementApp {
         };
         
         this.timers.push(timer);
+        this.expandedSessions.add(Number(sessionId));
         this.saveToLocalStorage();
         this.updateTimerList();
         
@@ -435,10 +456,16 @@ class TimeManagementApp {
     updateTimer(id, field, value) {
         const timer = this.timers.find(t => t.id === id);
         if (timer) {
+            const oldSessionId = timer.sessionId;
             if (field === 'duree') value = parseInt(value);
             timer[field] = value;
             if (field === 'sessionId') {
                 timer.sessionNom = this.getSessionName(value);
+                if (oldSessionId != value) {
+                    this.saveToLocalStorage();
+                    this.updateTimerList();
+                    return;
+                }
             }
             this.saveToLocalStorage();
         }
@@ -448,27 +475,73 @@ class TimeManagementApp {
         const container = document.getElementById('chronosList');
         container.innerHTML = '';
         
+        // Groupement des chronomètres par séance
+        const timersBySession = {};
         this.timers.forEach(timer => {
-            const sessionOptions = this.sessions.map(s => 
-                `<option value="${s.id}" ${s.id == timer.sessionId ? 'selected' : ''}>${String(s.nom).replace(/"/g, '&quot;')}</option>`
-            ).join('');
-
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>
-                    <select onchange="app.updateTimer(${timer.id}, 'sessionId', this.value)">
-                        ${sessionOptions}
-                    </select>
-                </td>
-                <td><input type="text" value="${String(timer.titre).replace(/"/g, '&quot;')}" onchange="app.updateTimer(${timer.id}, 'titre', this.value)"></td>
-                <td><input type="number" value="${timer.duree}" min="1" onchange="app.updateTimer(${timer.id}, 'duree', this.value)"></td>
-                <td><input type="text" value="${String(timer.travail).replace(/"/g, '&quot;')}" onchange="app.updateTimer(${timer.id}, 'travail', this.value)"></td>
-                <td>
-                    <button class="btn-delete" onclick="app.deleteTimer(${timer.id})">Supprimer</button>
-                </td>
-            `;
-            container.appendChild(row);
+            const sId = timer.sessionId;
+            if (!timersBySession[sId]) {
+                timersBySession[sId] = [];
+            }
+            timersBySession[sId].push(timer);
         });
+
+        // Affichage par groupe de séance
+        this.sessions.forEach(session => {
+            const sessionTimers = timersBySession[session.id];
+            if (sessionTimers && sessionTimers.length > 0) {
+                this.renderSessionGroup(container, session, sessionTimers);
+            }
+        });
+    }
+
+    renderSessionGroup(container, session, timers) {
+        const isExpanded = this.expandedSessions.has(session.id);
+        const icon = isExpanded ? 'fa-chevron-down' : 'fa-chevron-right';
+        
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'group-header';
+        headerRow.onclick = () => this.toggleSessionGroup(session.id);
+        headerRow.innerHTML = `
+            <td colspan="5">
+                <i class="fas ${icon}" style="margin-right: 10px; width: 15px;"></i>
+                <strong>${String(session.nom).replace(/"/g, '&quot;')}</strong> 
+                <span style="font-weight: normal; font-size: 0.9em; margin-left: 10px;">(${timers.length} chronomètres)</span>
+            </td>
+        `;
+        container.appendChild(headerRow);
+
+        if (isExpanded) {
+            timers.forEach(timer => {
+                const sessionOptions = this.sessions.map(s => 
+                    `<option value="${s.id}" ${s.id == timer.sessionId ? 'selected' : ''}>${String(s.nom).replace(/"/g, '&quot;')}</option>`
+                ).join('');
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <select onchange="app.updateTimer(${timer.id}, 'sessionId', this.value)">
+                            ${sessionOptions}
+                        </select>
+                    </td>
+                    <td><input type="text" value="${String(timer.titre).replace(/"/g, '&quot;')}" onchange="app.updateTimer(${timer.id}, 'titre', this.value)"></td>
+                    <td><input type="number" value="${timer.duree}" min="1" onchange="app.updateTimer(${timer.id}, 'duree', this.value)"></td>
+                    <td><input type="text" value="${String(timer.travail).replace(/"/g, '&quot;')}" onchange="app.updateTimer(${timer.id}, 'travail', this.value)"></td>
+                    <td>
+                        <button class="btn-delete" onclick="app.deleteTimer(${timer.id})">Supprimer</button>
+                    </td>
+                `;
+                container.appendChild(row);
+            });
+        }
+    }
+
+    toggleSessionGroup(sessionId) {
+        if (this.expandedSessions.has(sessionId)) {
+            this.expandedSessions.delete(sessionId);
+        } else {
+            this.expandedSessions.add(sessionId);
+        }
+        this.updateTimerList();
     }
     
     getSessionName(sessionId) {
@@ -507,6 +580,7 @@ class TimeManagementApp {
             this.timers.push(timer);
         }
         
+        this.expandedSessions.add(Number(sessionId));
         this.saveToLocalStorage();
         this.updateTimerList();
         alert(`${parts} chronomètres de ${this.formatTime(durationPerPart)} ont été ajoutés.`);
@@ -514,6 +588,7 @@ class TimeManagementApp {
 
     // Gestion de la Grille Horaire
     addTimeSlot() {
+        const establishment = document.getElementById('slotEstablishment').value.trim();
         const nom = document.getElementById('slotNom').value.trim();
         const debut = document.getElementById('slotDebut').value;
         const fin = document.getElementById('slotFin').value;
@@ -530,6 +605,7 @@ class TimeManagementApp {
 
         const slot = {
             id: Date.now(),
+            establishment: establishment || 'Défaut',
             nom,
             debut,
             fin
@@ -543,6 +619,7 @@ class TimeManagementApp {
         this.updateTimeSlotList();
 
         // Reset form
+        // On ne reset pas l'établissement pour faciliter la saisie multiple
         document.getElementById('slotNom').value = '';
         document.getElementById('slotDebut').value = '';
         document.getElementById('slotFin').value = '';
@@ -564,6 +641,9 @@ class TimeManagementApp {
                 this.timeSlots.sort((a, b) => a.debut.localeCompare(b.debut));
                 this.updateTimeSlotList();
             }
+            if (field === 'establishment') {
+                this.updateEstablishmentSelect();
+            }
             this.saveToLocalStorage();
         }
     }
@@ -575,6 +655,7 @@ class TimeManagementApp {
         this.timeSlots.forEach(slot => {
             const row = document.createElement('tr');
             row.innerHTML = `
+                <td><input type="text" value="${String(slot.establishment || '').replace(/"/g, '&quot;')}" onchange="app.updateTimeSlot(${slot.id}, 'establishment', this.value)" placeholder="Établissement"></td>
                 <td><input type="text" value="${String(slot.nom).replace(/"/g, '&quot;')}" onchange="app.updateTimeSlot(${slot.id}, 'nom', this.value)"></td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 5px;">
@@ -589,6 +670,30 @@ class TimeManagementApp {
             `;
             container.appendChild(row);
         });
+    }
+
+    updateEstablishmentSelect() {
+        const establishments = [...new Set(this.timeSlots.map(s => s.establishment || 'Défaut'))].sort();
+        
+        // Update Datalist pour l'autocomplétion
+        const datalist = document.getElementById('establishmentList');
+        datalist.innerHTML = establishments.map(e => `<option value="${e}">`).join('');
+
+        // Update Select Visualisation
+        const select = document.getElementById('visuEstablishmentSelect');
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">-- Établissement --</option>';
+        establishments.forEach(est => {
+            const opt = document.createElement('option');
+            opt.value = est;
+            opt.textContent = est;
+            select.appendChild(opt);
+        });
+        if (currentVal && establishments.includes(currentVal)) select.value = currentVal;
+        else if (establishments.length > 0) select.value = establishments[0];
+
+        // Sync visibility
+        select.style.display = document.getElementById('visuAlignGrid').checked ? 'inline-block' : 'none';
     }
 
     // Gestion Import/Export
@@ -641,6 +746,108 @@ class TimeManagementApp {
         reader.readAsText(file);
     }
 
+    // Fonctionnalités de Démo et Reset
+    resetData() {
+        if (confirm('ATTENTION : Vous êtes sur le point d\'effacer TOUTES les données (ateliers, séances, chronomètres, grille). Cette action est irréversible.\n\nVoulez-vous continuer ?')) {
+            this.workshops = [];
+            this.sessions = [];
+            this.timers = [];
+            this.timeSlots = [];
+            this.expandedSessions.clear();
+            this.saveToLocalStorage();
+            this.updateLists();
+            
+            // Réinitialiser l'affichage si une séance était en cours
+            this.resetSession();
+            document.getElementById('sessionDisplay').classList.add('hidden');
+            
+            alert('Application réinitialisée avec succès. Vous repartez d\'une page blanche.');
+        }
+    }
+
+    loadDemoData() {
+        if (this.workshops.length > 0 || this.sessions.length > 0) {
+            if (!confirm('Des données existent déjà. Voulez-vous ajouter les données de démonstration à la suite ?')) {
+                return;
+            }
+        }
+
+        const now = Date.now();
+        
+        // Création de données synthétiques
+        // Ateliers
+        const w1 = { id: now, nom: "Mathématiques", description: "Calcul, Géométrie et Grandeurs", image: "" };
+        const w2 = { id: now + 1, nom: "Français", description: "Lecture, Écriture et Vocabulaire", image: "" };
+        const w3 = { id: now + 2, nom: "Histoire-Géographie", description: "Découverte du monde et du temps", image: "" };
+        const w4 = { id: now + 3, nom: "Sciences", description: "Expériences et découvertes", image: "" };
+        const w5 = { id: now + 4, nom: "EPS", description: "Activités physiques et sportives", image: "" };
+        
+        // Séances
+        const s1 = { id: now + 10, nom: "Calcul Mental", atelierId: w1.id, atelierNom: w1.nom, description: "Rituel du matin" };
+        const s2 = { id: now + 11, nom: "Lecture Silencieuse", atelierId: w2.id, atelierNom: w2.nom, description: "Temps calme après la récréation" };
+        const s3 = { id: now + 12, nom: "La Révolution Française", atelierId: w3.id, atelierNom: w3.nom, description: "Introduction aux événements de 1789" };
+        const s4 = { id: now + 13, nom: "Le Volcan", atelierId: w4.id, atelierNom: w4.nom, description: "Expérience éruption effusive" };
+        const s5 = { id: now + 14, nom: "Basket-ball", atelierId: w5.id, atelierNom: w5.nom, description: "Dribbles et passes" };
+        
+        // Chronomètres
+        // S1 Maths
+        const t1 = { id: now + 100, sessionId: s1.id, sessionNom: s1.nom, titre: "Préparation", duree: 60, travail: "Sortir l'ardoise et le feutre" };
+        const t2 = { id: now + 101, sessionId: s1.id, sessionNom: s1.nom, titre: "Série Rapide", duree: 180, travail: "5 calculs au tableau" };
+        const t3 = { id: now + 102, sessionId: s1.id, sessionNom: s1.nom, titre: "Correction", duree: 120, travail: "Correction collective et explications" };
+        
+        // S2 Français
+        const t4 = { id: now + 103, sessionId: s2.id, sessionNom: s2.nom, titre: "Installation", duree: 120, travail: "Choisir un livre et s'installer" };
+        const t5 = { id: now + 104, sessionId: s2.id, sessionNom: s2.nom, titre: "Lecture", duree: 900, travail: "Lecture individuelle en silence" };
+
+        // S3 Histoire
+        const t6 = { id: now + 105, sessionId: s3.id, sessionNom: s3.nom, titre: "Rappel", duree: 300, travail: "Quizz sur la leçon précédente (Louis XVI)" };
+        const t7 = { id: now + 106, sessionId: s3.id, sessionNom: s3.nom, titre: "Vidéo", duree: 600, travail: "Visionnage : La prise de la Bastille" };
+        const t8 = { id: now + 107, sessionId: s3.id, sessionNom: s3.nom, titre: "Groupe", duree: 900, travail: "Répondre au questionnaire par deux" };
+        const t9 = { id: now + 108, sessionId: s3.id, sessionNom: s3.nom, titre: "Bilan", duree: 300, travail: "Copie de la trace écrite" };
+
+        // S4 Sciences
+        const t10 = { id: now + 109, sessionId: s4.id, sessionNom: s4.nom, titre: "Hypothèses", duree: 300, travail: "Comment faire une éruption ?" };
+        const t11 = { id: now + 110, sessionId: s4.id, sessionNom: s4.nom, titre: "Expérience", duree: 1200, travail: "Mélange vinaigre et bicarbonate" };
+        const t12 = { id: now + 111, sessionId: s4.id, sessionNom: s4.nom, titre: "Schéma", duree: 600, travail: "Dessiner l'expérience sur le cahier" };
+
+        // S5 EPS
+        const t13 = { id: now + 112, sessionId: s5.id, sessionNom: s5.nom, titre: "Échauffement", duree: 600, travail: "Trotiner et articulations" };
+        const t14 = { id: now + 113, sessionId: s5.id, sessionNom: s5.nom, titre: "Atelier Dribble", duree: 900, travail: "Slalom entre les plots" };
+        const t15 = { id: now + 114, sessionId: s5.id, sessionNom: s5.nom, titre: "Match", duree: 1200, travail: "5 contre 5" };
+        const t16 = { id: now + 115, sessionId: s5.id, sessionNom: s5.nom, titre: "Retour au calme", duree: 300, travail: "Étirements et hydratation" };
+
+        // Grille Horaire
+        const g1 = { id: now + 200, establishment: "École Rosa Bonheur", nom: "M1 - Accueil", debut: "08:30", fin: "09:30" };
+        const g2 = { id: now + 201, establishment: "École Rosa Bonheur", nom: "M2", debut: "09:30", fin: "10:30" };
+        const g3 = { id: now + 202, establishment: "École Rosa Bonheur", nom: "Récréation Matin", debut: "10:30", fin: "10:45" };
+        const g4 = { id: now + 203, establishment: "École Rosa Bonheur", nom: "M3", debut: "10:45", fin: "11:45" };
+        const g5 = { id: now + 204, establishment: "École Rosa Bonheur", nom: "Pause Méridienne", debut: "11:45", fin: "13:30" };
+        const g6 = { id: now + 205, establishment: "École Rosa Bonheur", nom: "S1 - Après-midi", debut: "13:30", fin: "14:30" };
+        const g7 = { id: now + 206, establishment: "École Rosa Bonheur", nom: "S2", debut: "14:30", fin: "15:30" };
+        const g8 = { id: now + 207, establishment: "École Rosa Bonheur", nom: "Récréation Après-midi", debut: "15:30", fin: "15:45" };
+        const g9 = { id: now + 208, establishment: "École Rosa Bonheur", nom: "S3 - Fin de journée", debut: "15:45", fin: "16:30" };
+        
+        // Ajout d'une grille pour un autre établissement (Exemple Prof sur 2 écoles)
+        const g10 = { id: now + 209, establishment: "Collège Jean Moulin", nom: "M1", debut: "08:00", fin: "08:55" };
+        const g11 = { id: now + 210, establishment: "Collège Jean Moulin", nom: "M2", debut: "09:00", fin: "09:55" };
+        const g12 = { id: now + 211, establishment: "Collège Jean Moulin", nom: "M3", debut: "10:10", fin: "11:05" };
+
+        this.workshops.push(w1, w2, w3, w4, w5);
+        this.sessions.push(s1, s2, s3, s4, s5);
+        this.timers.push(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16);
+        this.timeSlots.push(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12);
+        
+        // Expand all demo sessions
+        this.sessions.forEach(s => this.expandedSessions.add(s.id));
+        
+        // Tri de la grille
+        this.timeSlots.sort((a, b) => a.debut.localeCompare(b.debut));
+        
+        this.saveToLocalStorage();
+        this.updateLists();
+        alert('Données de démonstration complètes chargées (Ateliers, Séances, Chronos, Grille) !');
+    }
+
     // Fonctionnalités de visualisation de séance
     startSession() {
         const sessionId = document.getElementById('visuSeanceSelect').value;
@@ -677,12 +884,14 @@ class TimeManagementApp {
         // Logique d'alignement sur la grille
         const alignGrid = document.getElementById('visuAlignGrid').checked;
         if (alignGrid) {
+            const selectedEst = document.getElementById('visuEstablishmentSelect').value;
             const now = new Date();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
             
             // Trouver le créneau correspondant (celui qui finit après maintenant)
             // On cherche le créneau le plus proche qui contient l'heure actuelle ou qui va commencer
-            const matchingSlot = this.timeSlots.find(slot => {
+            const relevantSlots = this.timeSlots.filter(s => (s.establishment || 'Défaut') === selectedEst);
+            const matchingSlot = relevantSlots.find(slot => {
                 const [hEnd, mEnd] = slot.fin.split(':').map(Number);
                 const endMinutes = hEnd * 60 + mEnd;
                 return endMinutes > currentMinutes;
