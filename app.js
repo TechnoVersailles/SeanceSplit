@@ -25,6 +25,12 @@ class TimeManagementApp {
             if (t.sessionId) this.expandedSessions.add(Number(t.sessionId));
         });
 
+        // Gestion de l'affichage groupé des créneaux
+        this.expandedEstablishments = new Set();
+        this.timeSlots.forEach(s => {
+            if (s.establishment) this.expandedEstablishments.add(s.establishment);
+        });
+
         // Initialisation de l'interface
         this.initUI();
         this.updateLists();
@@ -615,6 +621,7 @@ class TimeManagementApp {
         // Trier par heure de début
         this.timeSlots.sort((a, b) => a.debut.localeCompare(b.debut));
         
+        this.expandedEstablishments.add(slot.establishment);
         this.saveToLocalStorage();
         this.updateTimeSlotList();
 
@@ -643,6 +650,7 @@ class TimeManagementApp {
             }
             if (field === 'establishment') {
                 this.updateEstablishmentSelect();
+                this.updateTimeSlotList();
             }
             this.saveToLocalStorage();
         }
@@ -652,24 +660,68 @@ class TimeManagementApp {
         const container = document.getElementById('grilleList');
         container.innerHTML = '';
 
+        // Groupement des créneaux par établissement
+        const slotsByEst = {};
         this.timeSlots.forEach(slot => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><input type="text" value="${String(slot.establishment || '').replace(/"/g, '&quot;')}" onchange="app.updateTimeSlot(${slot.id}, 'establishment', this.value)" placeholder="Établissement"></td>
-                <td><input type="text" value="${String(slot.nom).replace(/"/g, '&quot;')}" onchange="app.updateTimeSlot(${slot.id}, 'nom', this.value)"></td>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <input type="time" value="${slot.debut}" onchange="app.updateTimeSlot(${slot.id}, 'debut', this.value)">
-                        <span>-</span>
-                        <input type="time" value="${slot.fin}" onchange="app.updateTimeSlot(${slot.id}, 'fin', this.value)">
-                    </div>
-                </td>
-                <td>
-                    <button class="btn-delete" onclick="app.deleteTimeSlot(${slot.id})">Supprimer</button>
-                </td>
-            `;
-            container.appendChild(row);
+            const est = slot.establishment || 'Défaut';
+            if (!slotsByEst[est]) {
+                slotsByEst[est] = [];
+            }
+            slotsByEst[est].push(slot);
         });
+
+        // Affichage par groupe d'établissement
+        const establishments = Object.keys(slotsByEst).sort();
+        establishments.forEach(est => {
+            this.renderEstablishmentGroup(container, est, slotsByEst[est]);
+        });
+    }
+
+    renderEstablishmentGroup(container, establishment, slots) {
+        const isExpanded = this.expandedEstablishments.has(establishment);
+        const icon = isExpanded ? 'fa-chevron-down' : 'fa-chevron-right';
+        
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'group-header';
+        headerRow.onclick = () => this.toggleEstablishmentGroup(establishment);
+        headerRow.innerHTML = `
+            <td colspan="4">
+                <i class="fas ${icon}" style="margin-right: 10px; width: 15px;"></i>
+                <strong>${String(establishment).replace(/"/g, '&quot;')}</strong> 
+                <span style="font-weight: normal; font-size: 0.9em; margin-left: 10px;">(${slots.length} créneaux)</span>
+            </td>
+        `;
+        container.appendChild(headerRow);
+
+        if (isExpanded) {
+            slots.forEach(slot => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="text" value="${String(slot.establishment || '').replace(/"/g, '&quot;')}" onchange="app.updateTimeSlot(${slot.id}, 'establishment', this.value)" placeholder="Établissement"></td>
+                    <td><input type="text" value="${String(slot.nom).replace(/"/g, '&quot;')}" onchange="app.updateTimeSlot(${slot.id}, 'nom', this.value)"></td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <input type="time" value="${slot.debut}" onchange="app.updateTimeSlot(${slot.id}, 'debut', this.value)">
+                            <span>-</span>
+                            <input type="time" value="${slot.fin}" onchange="app.updateTimeSlot(${slot.id}, 'fin', this.value)">
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn-delete" onclick="app.deleteTimeSlot(${slot.id})">Supprimer</button>
+                    </td>
+                `;
+                container.appendChild(row);
+            });
+        }
+    }
+
+    toggleEstablishmentGroup(establishment) {
+        if (this.expandedEstablishments.has(establishment)) {
+            this.expandedEstablishments.delete(establishment);
+        } else {
+            this.expandedEstablishments.add(establishment);
+        }
+        this.updateTimeSlotList();
     }
 
     updateEstablishmentSelect() {
@@ -754,6 +806,7 @@ class TimeManagementApp {
             this.timers = [];
             this.timeSlots = [];
             this.expandedSessions.clear();
+            this.expandedEstablishments.clear();
             this.saveToLocalStorage();
             this.updateLists();
             
@@ -839,6 +892,11 @@ class TimeManagementApp {
         
         // Expand all demo sessions
         this.sessions.forEach(s => this.expandedSessions.add(s.id));
+
+        // Expand all demo establishments
+        this.timeSlots.forEach(s => {
+            if (s.establishment) this.expandedEstablishments.add(s.establishment);
+        });
         
         // Tri de la grille
         this.timeSlots.sort((a, b) => a.debut.localeCompare(b.debut));
