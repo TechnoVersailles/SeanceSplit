@@ -110,6 +110,10 @@ class TimeManagementApp {
         document.querySelectorAll('.section').forEach(section => {
             section.classList.remove('active');
         });
+
+        // Désactiver la vue globale si elle était active
+        const main = document.getElementById('mainContent');
+        if (main) main.classList.remove('global-view');
         
         // Mettre à jour les boutons de navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -117,16 +121,29 @@ class TimeManagementApp {
         });
         
         // Afficher la section demandée
-        const sections = ['ateliersSection', 'seancesSection', 'chronosSection', 'grilleSection', 'dataSection', 'visualisationSection'];
-        const buttons = ['btnAteliers', 'btnSeances', 'btnChronos', 'btnGrille', 'btnData', 'btnVisualisation'];
+        const sections = ['GLOBAL_VIEW', 'ateliersSection', 'seancesSection', 'chronosSection', 'grilleSection', 'dataSection', 'visualisationSection'];
+        const buttons = ['btnGlobal', 'btnAteliers', 'btnSeances', 'btnChronos', 'btnGrille', 'btnData', 'btnVisualisation'];
         
-        document.getElementById(sections[sectionIndex]).classList.add('active');
+        if (sections[sectionIndex] === 'GLOBAL_VIEW') {
+            this.showGlobalSection();
+        } else {
+            document.getElementById(sections[sectionIndex]).classList.add('active');
+        }
+        
         document.getElementById(buttons[sectionIndex]).classList.add('active');
         
         // Mettre à jour les listes si nécessaire
         this.updateLists();
     }
     
+    showGlobalSection() {
+        document.getElementById('ateliersSection').classList.add('active');
+        document.getElementById('seancesSection').classList.add('active');
+        document.getElementById('chronosSection').classList.add('active');
+        const main = document.getElementById('mainContent');
+        if (main) main.classList.add('global-view');
+    }
+
     updateLists() {
         this.updateWorkshopList();
         this.updateSessionList();
@@ -412,9 +429,15 @@ class TimeManagementApp {
     addTimer() {
         const sessionId = document.getElementById('chronoSeance').value;
         const titre = document.getElementById('chronoTitre').value.trim();
-        const duree = parseInt(document.getElementById('chronoDuree').value);
+        const minutes = parseInt(document.getElementById('chronoMinutes').value) || 0;
+        let seconds = parseInt(document.getElementById('chronoSeconds').value) || 0;
         const travail = document.getElementById('chronoTravail').value.trim();
         
+        if (seconds > 60) {
+            seconds = 60;
+            document.getElementById('chronoSeconds').value = 60;
+        }
+
         if (!sessionId) {
             alert('Veuillez sélectionner une séance');
             return;
@@ -425,8 +448,10 @@ class TimeManagementApp {
             return;
         }
         
+        const duree = (minutes * 60) + seconds;
+        
         if (!duree || duree <= 0) {
-            alert('Veuillez entrer une durée valide (en secondes)');
+            alert('Veuillez entrer une durée valide');
             return;
         }
         
@@ -447,7 +472,8 @@ class TimeManagementApp {
         // Réinitialiser le formulaire
         document.getElementById('chronoSeance').value = '';
         document.getElementById('chronoTitre').value = '';
-        document.getElementById('chronoDuree').value = '';
+        document.getElementById('chronoMinutes').value = '';
+        document.getElementById('chronoSeconds').value = '';
         document.getElementById('chronoTravail').value = '';
     }
     
@@ -474,6 +500,29 @@ class TimeManagementApp {
                 }
             }
             this.saveToLocalStorage();
+        }
+    }
+    
+    updateTimerMinutes(id, minutes) {
+        const timer = this.timers.find(t => t.id === id);
+        if (timer) {
+            const currentSeconds = timer.duree % 60;
+            const newDuration = (parseInt(minutes || 0) * 60) + currentSeconds;
+            this.updateTimer(id, 'duree', newDuration);
+        }
+    }
+
+    updateTimerSeconds(id, input) {
+        const timer = this.timers.find(t => t.id === id);
+        if (timer) {
+            let seconds = parseInt(input.value || 0);
+            if (seconds > 60) {
+                seconds = 60;
+                input.value = 60;
+            }
+            const currentMinutes = Math.floor(timer.duree / 60);
+            const newDuration = (currentMinutes * 60) + seconds;
+            this.updateTimer(id, 'duree', newDuration);
         }
     }
 
@@ -518,6 +567,9 @@ class TimeManagementApp {
 
         if (isExpanded) {
             timers.forEach(timer => {
+                const minutes = Math.floor(timer.duree / 60);
+                const seconds = timer.duree % 60;
+
                 const sessionOptions = this.sessions.map(s => 
                     `<option value="${s.id}" ${s.id == timer.sessionId ? 'selected' : ''}>${String(s.nom).replace(/"/g, '&quot;')}</option>`
                 ).join('');
@@ -530,7 +582,12 @@ class TimeManagementApp {
                         </select>
                     </td>
                     <td><input type="text" value="${String(timer.titre).replace(/"/g, '&quot;')}" onchange="app.updateTimer(${timer.id}, 'titre', this.value)"></td>
-                    <td><input type="number" value="${timer.duree}" min="1" onchange="app.updateTimer(${timer.id}, 'duree', this.value)"></td>
+                    <td>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="number" value="${minutes}" min="0" onchange="app.updateTimerMinutes(${timer.id}, this.value)" style="width: 60px;" placeholder="Min"> : 
+                            <input type="number" value="${seconds}" min="0" max="60" onchange="app.updateTimerSeconds(${timer.id}, this)" style="width: 60px;" placeholder="Sec">
+                        </div>
+                    </td>
                     <td><input type="text" value="${String(timer.travail).replace(/"/g, '&quot;')}" onchange="app.updateTimer(${timer.id}, 'travail', this.value)"></td>
                     <td>
                         <button class="btn-delete" onclick="app.deleteTimer(${timer.id})">Supprimer</button>

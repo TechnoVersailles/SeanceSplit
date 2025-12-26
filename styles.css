@@ -41,6 +41,22 @@ nav {
     flex-wrap: wrap;
 }
 
+.nav-group {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 50px;
+    padding: 5px;
+    gap: 5px;
+}
+
+.nav-sub-group {
+    display: flex;
+    gap: 5px;
+    padding-left: 5px;
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 .nav-btn {
     display: flex;
     align-items: center;
@@ -686,6 +702,21 @@ table input:hover, table select:hover {
         align-items: center;
     }
     
+    .nav-group {
+        flex-direction: column;
+        width: 100%;
+        border-radius: 15px;
+    }
+
+    .nav-sub-group {
+        flex-direction: column;
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+        padding-left: 0;
+        padding-top: 5px;
+    }
+
     .nav-btn {
         width: 100%;
         margin-bottom: 5px;
